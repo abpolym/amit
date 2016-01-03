@@ -13,6 +13,7 @@ CREATE TABLE samples (
 	md5 VARCHAR(32) NOT NULL,
 	sha1 VARCHAR(40) NOT NULL,
 	sha256 VARCHAR(64) NOT NULL,
+	ssdeep VARCHAR(512) NOT NULL,
 	stype VARCHAR(10),
 	fingerprint VARCHAR(32),
 	package_name VARCHAR(256),
