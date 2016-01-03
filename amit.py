@@ -56,7 +56,35 @@ def hashes_test():
 	for i in a2: print i
 	print compare_all(a1, a2)
 
+def db_execute(dbconn, dbquery):
+	print '[db_execute] Executing query: [',dbquery,']'
+	dbcursor = dbconn.cursor()
+	dbcursor.execute(dbquery)
+	result = dbcursor.fetchone()
+	dbcursor.close()
+	return result
+
+def db_init(dbconn, dbconfig):
+	if db_table_exists(dbconn, 'samples'): return
+	print '[db_init] Creating database from config', dbconfig
+	dbcursor = dbconn.cursor()
+	dbqry = open(dbconfig, 'r').read()
+	dbcursor.executescript(dbqry)
+	dbcursor.close()
+	print '[db_init] Created database'
+
+def db_table_exists(dbconn, tablename):
+	dbqry='SELECT name FROM sqlite_master WHERE type="table" AND name="{}";'.format(tablename)
+	if db_execute(dbconn, dbqry) is None: return False
+	return True
+
 databasedir = 'database/'
+database=databasedir+'/amit.db'
+databaseconfig = databasedir+'/amit-db.sql'
+
 if not os.path.exists(databasedir):
 	os.makedirs(databasedir)
-conn = sqlite3.connect(databasedir+'/amit.db')
+
+dbconn = sqlite3.connect(database)
+db_init(dbconn, databaseconfig)
+dbconn.close()
