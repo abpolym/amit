@@ -1,4 +1,4 @@
-import hashlib, ssdeep
+import hashlib, ssdeep, sqlite3, os
 
 def hash_ssdeep(inbytes):
 	return ssdeep.hash(inbytes)
@@ -47,11 +47,16 @@ def compare_all(hasharray1, hasharray2):
 	a.append(compare_sha256(hasharray1[3], hasharray2[3]))
 	return a
 
-testdata = '\x90'*512*2
-testdata2 = 'mod'+'\x90'*512*2
+def hashes_test():
+	testdata = '\x90'*512*2
+	testdata2 = 'mod'+'\x90'*512*2
+	a1 = hash_all(testdata)
+	a2 = hash_all(testdata2)
+	for i in a1: print i
+	for i in a2: print i
+	print compare_all(a1, a2)
 
-a1 = hash_all(testdata)
-a2 = hash_all(testdata2)
-for i in a1: print i
-for i in a2: print i
-print compare_all(a1, a2)
+databasedir = 'database/'
+if not os.path.exists(databasedir):
+	os.makedirs(databasedir)
+conn = sqlite3.connect(databasedir+'/amit.db')
