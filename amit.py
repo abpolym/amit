@@ -85,8 +85,8 @@ def db_insert_sdk_dates(dbconn, sdkconfig):
 	dbcursor.close()
 	if len(result)>=len(sdklines): return
 	print '[db_insert_sdk_dates] Inserting sdk release dates into database'
-	for line in sdklines:
-		line = line.replace('\n','')
+	for idx in range(len(result),len(sdklines)):
+		line = sdklines[idx].replace('\n','')
 		sdkversion, sdkreleasedate = line.split(' ')
 		dbqry='INSERT INTO sdk_release_dates VALUES (?, strftime("%s", ?));'
 		dbcursor = dbconn.cursor()
