@@ -56,35 +56,55 @@ def hashes_test():
 	for i in a2: print i
 	print compare_all(a1, a2)
 
-def db_execute(dbconn, dbquery):
-	print '[db_execute] Executing query: [',dbquery,']'
-	dbcursor = dbconn.cursor()
-	dbcursor.execute(dbquery)
-	result = dbcursor.fetchone()
-	dbcursor.close()
-	return result
-
 def db_init(dbconn, dbconfig):
 	if db_table_exists(dbconn, 'samples'): return
-	print '[db_init] Creating database from config', dbconfig
+	print '[db_init] Creating database from config', dbconfig,
 	dbcursor = dbconn.cursor()
 	dbqry = open(dbconfig, 'r').read()
 	dbcursor.executescript(dbqry)
 	dbcursor.close()
-	print '[db_init] Created database'
+	print '[db_init] Created database.'
 
 def db_table_exists(dbconn, tablename):
-	dbqry='SELECT name FROM sqlite_master WHERE type="table" AND name="{}";'.format(tablename)
-	if db_execute(dbconn, dbqry) is None: return False
-	return True
+	dbqry='SELECT name FROM sqlite_master WHERE type="table" AND name=?;'
+	#if db_execute(dbconn, dbqry) is None: return False
+	dbcursor = dbconn.cursor()
+	dbcursor.execute(dbqry, (tablename,))
+	result = True
+	if dbcursor.fetchone() is None: result = False
+	dbcursor.close()
+	return result
+
+def db_insert_sdk_dates(dbconn, sdkconfig):
+	sdklines = []
+	with open(sdkconfig, 'r') as f:
+		sdklines = f.readlines()
+	dbcursor = dbconn.cursor()
+	dbcursor.execute('SELECT * FROM sdk_release_dates;')
+	result = dbcursor.fetchall()
+	dbcursor.close()
+	if len(result)>=len(sdklines): return
+	print '[db_insert_sdk_dates] Inserting sdk release dates into database'
+	for line in sdklines:
+		line = line.replace('\n','')
+		sdkversion, sdkreleasedate = line.split(' ')
+		dbqry='INSERT INTO sdk_release_dates VALUES (?, strftime("%s", ?));'
+		dbcursor = dbconn.cursor()
+		dbcursor.execute(dbqry, (int(sdkversion), sdkreleasedate))
+		result = dbcursor.fetchall()
+		dbcursor.close()
+	dbconn.commit()
+	print '[db_insert_sdk_dates] Inserted sdk release dates.'
 
 databasedir = 'database/'
 database=databasedir+'/amit.db'
 databaseconfig = databasedir+'/amit-db.sql'
+sdkconfig = databasedir+'/sdks.list'
 
 if not os.path.exists(databasedir):
 	os.makedirs(databasedir)
 
 dbconn = sqlite3.connect(database)
 db_init(dbconn, databaseconfig)
+db_insert_sdk_dates(dbconn, sdkconfig)
 dbconn.close()
