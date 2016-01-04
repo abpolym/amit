@@ -1,4 +1,4 @@
-import hashlib, re, ssdeep, sqlite3, subprocess, sys, os
+import hashlib, re, ssdeep, sqlite3, subprocess, sys, os, zipfile
 
 def hash_ssdeep(inbytes):
 	return ssdeep.hash(inbytes)
@@ -107,6 +107,42 @@ def get_package_name(apkpath):
 	if len(result)<1: return None
 	return result[0]
 
+def get_cert_fingerprint(apkpath):
+	zf = zipfile.ZipFile(apkpath)
+	certnames = []
+	for f in zf.namelist():
+		result = re.findall(r'META-INF/.*\.[DR]{1}SA', f)
+		if len(result) < 1: continue
+		certnames.append(result[0])
+	print 'NAMES:',certnames
+	if len(certnames)>1:
+		print 'ERROR: Not implemented to store more than one fingerprint for list:',certnames
+		return None
+	try:
+		data = zf.read(certnames[0])
+	except KeyError:
+		print 'ERROR: Did not find {} in zip file'.format(certnames[0])
+		return None
+	with open('/tmp/amirtmp', 'wb') as f:
+		f.write(data)
+	# MD5, SHA1, SHA256
+	fingerprint = [None, None, None]
+	command = "keytool -file /tmp/amirtmp -printcert"
+	process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=None, shell=True)
+	output = process.communicate()[0]
+	result = re.findall(r"\t MD5: (.*)", output)
+	if len(result)<1: return None
+	fingerprint[0]=result[0]
+	result = re.findall(r"\t SHA1: (.*)", output)
+	if len(result)<1: return None
+	fingerprint[1]=result[0]
+	result = re.findall(r"\t SHA256: (.*)", output)
+	if len(result)<1: return None
+	fingerprint[2]=result[0]
+	for idx in range(len(fingerprint)):
+		fingerprint[idx]=re.sub('[:\ ]','',fingerprint[idx])
+	return fingerprint
+	
 # TODO: Include argparse
 if len(sys.argv)!=2: sys.exit(1)
 
@@ -124,4 +160,5 @@ db_init(dbconn, databaseconfig)
 db_insert_sdk_dates(dbconn, sdkconfig)
 dbconn.close()
 
-print get_package_name('data/898d0bc43c4a5b21797ac844dc05df4d80960b21a7ae5d72d9611043a47f7d61.apk')
+#print get_package_name('data/898d0bc43c4a5b21797ac844dc05df4d80960b21a7ae5d72d9611043a47f7d61.apk')
+print get_cert_fingerprint('data/898d0bc43c4a5b21797ac844dc05df4d80960b21a7ae5d72d9611043a47f7d61.apk')
