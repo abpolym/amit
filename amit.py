@@ -1,4 +1,4 @@
-import hashlib, ssdeep, sqlite3, os
+import hashlib, re, ssdeep, sqlite3, subprocess, sys, os
 
 def hash_ssdeep(inbytes):
 	return ssdeep.hash(inbytes)
@@ -96,6 +96,21 @@ def db_insert_sdk_dates(dbconn, sdkconfig):
 	dbconn.commit()
 	print '[db_insert_sdk_dates] Inserted sdk release dates.'
 
+def get_package_name(apkpath):
+	# TODO Check for command injection - just in case :)
+	global sdktoolspath
+	#Extract the AndroidManifest.xml permissions:
+	command = sdktoolspath+"aapt dump badging " + apkpath + " | grep -E 'package:(?:.*) name'"
+	process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=None, shell=True)
+	output = process.communicate()[0].replace('\n','')
+	result = re.findall(r"name='([^']*)'", output)
+	if len(result)<1: return None
+	return result[0]
+
+# TODO: Include argparse
+if len(sys.argv)!=2: sys.exit(1)
+
+sdktoolspath = sys.argv[1]
 databasedir = 'database/'
 database=databasedir+'/amit.db'
 databaseconfig = databasedir+'/amit-db.sql'
@@ -108,3 +123,5 @@ dbconn = sqlite3.connect(database)
 db_init(dbconn, databaseconfig)
 db_insert_sdk_dates(dbconn, sdkconfig)
 dbconn.close()
+
+print get_package_name('data/898d0bc43c4a5b21797ac844dc05df4d80960b21a7ae5d72d9611043a47f7d61.apk')
